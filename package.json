@@ -1,0 +1,15 @@
+{
+  "name": "Halma-Multiplayer",
+  "author" : "Raz Friman, Raymond Martin",
+  "description": "Multiplayer Halma in HTML5 using socket.io, node.js and canvas.",
+  "license": "MIT",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "3.3.x",
+    "socket.io": "0.9.x",
+    "node-uuid": "1.3.3"
+  },
+  "engine": {
+    "node": "0.10.x"
+  }
+}
