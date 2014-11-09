@@ -38,7 +38,7 @@
         //Send the requested file
         res.sendfile( __dirname + '/' + file );
 
-    }); //app.get *
+    });
 
 
     var sio = io.listen(server);
@@ -60,26 +60,22 @@
         //tell the player they connected, giving them their id
         client.emit('onconnected', { id: client.userid } );
 
-        //now we can find them a game to play with someone.
-        //if no game exists with someone waiting, they create one and wait.
+        // Find a game to join
         game_server.findGame(client);
 
-        //Useful to know when someone connects
+        // For debugging
         console.log('\t socket.io:: player ' + client.userid + ' connected');
         
-        //Now we want to handle some of the messages that clients will send.
-        //They send messages here, and we send them to the game_server to handle.
+        // Handle user messages and pass it to the game server
         client.on('message', function(m) {
             game_server.onMessage(client, m);
-        }); //client.on message
+        });
 
-       
-        //When this client disconnects, we want to tell the game server
-        //about that as well, so it can remove them from the game they are
-        //in, and make sure the other player knows that they left and so on.
+
+        // user disconnected
         client.on('disconnect', function () {
             
-            //Useful to know when soomeone disconnects
+            // For debugging
             console.log('\t socket.io:: client disconnected ' + client.userid + ' ' + client.game_id);
             
             //If the client was in a game, set by game_server.findGame,
@@ -89,9 +85,9 @@
                 //player leaving a game should destroy that game
                 game_server.endGame(client.game.id, client.userid);
 
-            } //client.game_id
-        }); //client.on disconnect
-    }); //sio.sockets.on connection
+            }
+        });
+    });
 
 
 
