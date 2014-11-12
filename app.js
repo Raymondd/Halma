@@ -2,7 +2,7 @@
     // Express & Node server setup code was adapted from the following guide:
     // http://buildnewgames.com/real-time-multiplayer
 
-    var io = require('socket.io'),
+    var io = require('socket.io');
     var express = require('express');
     var UUID = require('node-uuid');
     var http = require('http');
