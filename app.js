@@ -6,6 +6,7 @@
     var express = require('express');
     var UUID = require('node-uuid');
     var http = require('http');
+    var lodash = require('lodash');
 
     var gameport= process.env.PORT || 4004;
     var verbose = false;

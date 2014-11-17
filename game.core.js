@@ -101,6 +101,9 @@ if('undefined' != typeof(global)) frame_time = 1000; //on server we run at 45ms,
             //Set their colors from the storage or locally
             this.color = '#cc8822' ;
             this.players.self.color = this.color;
+            this.isHostsTurn = true;
+
+
 
         } else { //if !server
 
@@ -165,8 +168,8 @@ if( 'undefined' != typeof global ) {
                 this.pos = { x:200, y:400 };
             }
 
-    }; //game_player.constructor
 
+    }; //game_player.constructor
 
 
     game_player.prototype.draw = function(){
@@ -309,6 +312,94 @@ game_core.prototype.drawPiece =function(piece, color) {
 
 }; //game_core.update
 
+game_core.prototype.setup = function() {
+
+this.viewport.addEventListener('click', this.onClick.bind(this), false);
+
+};
+
+
+game_core.prototype.getCursorPosition = function(e) {
+
+    var x;
+    var y;
+    if (e.pageX != undefined && e.pageY != undefined) {
+        
+    x = e.pageX;
+    y = e.pageY;
+    }
+    else
+    {
+        
+    x = e.clientX + document.body.scrollLeft +
+            document.documentElement.scrollLeft;
+    y = e.clientY + document.body.scrollTop +
+            document.documentElement.scrollTop;
+    }
+
+    x -= this.viewport.offsetLeft;
+    y -= this.viewport.offsetTop;
+
+    
+    var cell = { x:Math.floor(y/this.kPieceHeight),
+        y: Math.floor(x/this.kPieceWidth)
+    };
+                  
+    return cell;
+};
+
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+// CLICK HANLER
+// SEND MESSAGES BETWEEN CLIENTS HERE
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+/////////////////////////////////////////////////////
+game_core.prototype.onClick = function(e) {
+
+
+    var cell = this.getCursorPosition(e);    
+    console.log(cell);
+    console.log(this.isCurrentPlayersTurn());
+
+    if(this.isCurrentPlayersTurn()) {
+
+        if(_.any(this.players.self.pieces, function(p) { return p.x == cell.x && p.y == cell.y; })) {
+
+            // clicked on a piece
+            this.clickOnPiece(cell);
+        } else {
+            this.clickOnEmpty(cell);
+        }
+    }
+
+    this.client_handle_input();
+};
+
+game_core.prototype.clickOnPiece = function(cell) {
+
+
+};
+
+game_core.prototype.clickOnEmpty = function(cell) {
+
+};
+
+game_core.prototype.isCurrentPlayersTurn = function() {
+    if(this.players.self.host) {
+        return this.isHostsTurn;
+    } else {
+        return !this.isHostsTurn;
+    }   
+}
+
 
 game_core.prototype.process_input = function( player ) {
 
@@ -411,47 +502,14 @@ game_core.prototype.handle_server_input = function(client, input, input_time, in
 
     game_core.prototype.client_handle_input = function(){
 
-    //if(this.lit > this.local_time) return;
-    //this.lit = this.local_time+0.5; //one second delay
 
-        //This takes input from the client and keeps a record,
-        //It also sends the input information to the server immediately
-        //as it is pressed. It also tags each input with a sequence number.
+    console.log('client handle input');
 
-        var x_dir = 0;
-        var y_dir = 0;
-        var input = [];
-        this.client_has_input = false;
+    var message = 'z.' + JSON.stringify(this.players.self.pieces);
 
+    console.log(message);
+    this.socket.send(message);
 
-        if(input.length) {
-
-            //Update what sequence we are on now
-            this.input_seq += 1;
-
-            //Store the input state as a snapshot of what happened.
-            this.players.self.inputs.push({
-                inputs : input,
-                time : this.local_time.fixed(3),
-                seq : this.input_seq
-            });
-
-            //Send the packet of information to the server.
-            //The input packets are labelled with an 'i' in front.
-            var server_packet = 'i.';
-            server_packet += input.join('-') + '.';
-            server_packet += this.local_time.toFixed(3).replace('.','-') + '.';
-            server_packet += this.input_seq;
-
-            //Go
-            this.socket.send(  server_packet  );
-
-
-        } else {
-
-            return {x:0,y:0};
-
-        }
 
 }; //game_core.client_handle_input
 
@@ -521,14 +579,11 @@ game_core.prototype.client_update = function() {
 
 
         //Clear the screen area
-        this.ctx.clearRect(0,0,400,450);
+        this.ctx.clearRect(0,0,360,450);
 
         this.drawTurnMessage();
 
         this.drawBoard();
-
-        //Capture inputs from the player
-        this.client_handle_input();
 
         //Now they should have updated, we can draw the entity
         this.players.other.draw();
@@ -723,6 +778,13 @@ game_core.prototype.client_onnetmessage = function(data) {
     var commanddata = commands[2] || null;
 
     switch(command) {
+
+        case 'z' : // Make a move
+                var newPositions = JSON.parse(subcommand);
+                console.log(newPositions);
+                this.players.other.pieces = newPositions;
+                break;
+
         case 's': //server message
 
         switch(subcommand) {
@@ -741,6 +803,9 @@ game_core.prototype.client_onnetmessage = function(data) {
 
                 case 'p' : //server ping
                 this.client_onping(commanddata); break;
+
+                case 'z' : // Make a move
+                console.log('received Z'); break;
 
             } //subcommand
 

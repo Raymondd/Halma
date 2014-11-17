@@ -33,7 +33,7 @@ window.onload = function(){
 	game = new game_core();
 
 	//Create canvas with the device resolution.
-	var myCanvas = createHiDPICanvas(400,450);
+	var myCanvas = createHiDPICanvas(360,450);
 
 		//Fetch the viewport
 		game.viewport = myCanvas;
@@ -43,6 +43,7 @@ window.onload = function(){
 		game.ctx = game.viewport.getContext('2d');
 		game.ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
+		game.setup();
 
 		//Set the draw style for the font
 		game.ctx.font = '16px "Helvetica"';

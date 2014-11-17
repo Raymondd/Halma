@@ -63,7 +63,15 @@ var verbose = true;
             (client.game.player_host.userid == client.userid) ?
                 client.game.player_client : client.game.player_host;
 
-        if(message_type == 'i') {
+
+        // Player made a move,
+        // Relay the move to the other client
+        if(message_type == 'z') {
+            if(other_client) {
+            other_client.send(message);
+        }
+
+        } else if(message_type == 'i') {
                 //Input handler will forward this
             this.onInput(client, message_parts);
 
