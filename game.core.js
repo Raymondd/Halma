@@ -267,13 +267,15 @@ game_core.prototype.drawPiece =function(piece, color) {
     var y = piece.y;
     var x = (x * this.kPieceWidth) + (this.kPieceWidth/2);
     var y = (y * this.kPieceWidth) + (this.kPieceWidth/2);
-    var radius = (this.kPieceWidth/2) - (this.kPieceWidth/10);
+    var radius = (this.kPieceWidth/2) - (this.kPieceWidth/6);
 
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI*2, false);
     this.ctx.closePath();
-    this.ctx.strokeStyle = color;
+    this.ctx.strokeStyle = piece.selected ? 'black' : color;
+    this.ctx.lineWidth = 4;
     this.ctx.stroke();
+    this.ctx.lineWidth = 1;
 
     this.ctx.fillStyle = color;
     this.ctx.fill();
@@ -341,8 +343,8 @@ game_core.prototype.getCursorPosition = function(e) {
     y -= this.viewport.offsetTop;
 
     
-    var cell = { x:Math.floor(y/this.kPieceHeight),
-        y: Math.floor(x/this.kPieceWidth)
+    var cell = { y:Math.floor(y/this.kPieceHeight),
+        x: Math.floor(x/this.kPieceWidth)
     };
                   
     return cell;
@@ -366,30 +368,61 @@ game_core.prototype.onClick = function(e) {
 
 
     var cell = this.getCursorPosition(e);    
+    
     console.log(cell);
     console.log(this.isCurrentPlayersTurn());
 
-    if(this.isCurrentPlayersTurn()) {
+    
+    if(this.isCurrentPlayersTurn() || true) {
 
-        if(_.any(this.players.self.pieces, function(p) { return p.x == cell.x && p.y == cell.y; })) {
+        var matchingCell = _.find(this.players.self.pieces, function(p)
+         { return p.x == cell.x && p.y == cell.y; });
 
+        console.log(matchingCell);
+        if(matchingCell) {
             // clicked on a piece
-            this.clickOnPiece(cell);
+            this.clickOnPiece(matchingCell);
         } else {
             this.clickOnEmpty(cell);
         }
     }
 
+
     this.client_handle_input();
+};
+
+game_core.prototype.resetSelected = function() {
+    _.each(this.players.self.pieces, function(cell) {
+        cell.selected = false;
+    });
 };
 
 game_core.prototype.clickOnPiece = function(cell) {
 
-
+    if(this.players.self.pieces.selectedPiece && this.players.self.pieces.selectedPiece == cell) {
+        this.resetSelected();
+        this.players.self.pieces.selectedPiece = null;
+    } else {
+    this.resetSelected();
+    cell.selected = true;
+    this.players.self.pieces.selectedPiece = cell;    
+    }
 };
 
 game_core.prototype.clickOnEmpty = function(cell) {
+    if(this.players.self.pieces.selectedPiece) {
 
+        if (this.players.self.pieces.selectedPiece.x == cell.x &&
+            this.players.self.pieces.selectedPiece.y == cell.y)
+        {
+            this.players.self.pieces.selectedPiece.selected = false;
+            this.players.self.pieces.selectedPiece = null;
+        } else {
+
+        this.players.self.pieces.selectedPiece.x = cell.x;
+        this.players.self.pieces.selectedPiece.y = cell.y;
+        }
+    }
 };
 
 game_core.prototype.isCurrentPlayersTurn = function() {
@@ -399,44 +432,6 @@ game_core.prototype.isCurrentPlayersTurn = function() {
         return !this.isHostsTurn;
     }   
 }
-
-
-game_core.prototype.process_input = function( player ) {
-
-    //It's possible to have recieved multiple inputs by now,
-    //so we process each one
-    var x_dir = 0;
-    var y_dir = 0;
-    var ic = player.inputs.length;
-    if(ic) {
-        for(var j = 0; j < ic; ++j) {
-                //don't process ones we already have simulated locally
-                if(player.inputs[j].seq <= player.last_input_seq) continue;
-
-                var input = player.inputs[j].inputs;
-                var c = input.length;
-                for(var i = 0; i < c; ++i) {
-                    var key = input[i];
-                    if(key == 'l') {
-                        x_dir -= 1;
-                    }
-                    if(key == 'r') {
-                        x_dir += 1;
-                    }
-                    if(key == 'd') {
-                        y_dir += 1;
-                    }
-                    if(key == 'u') {
-                        y_dir -= 1;
-                    }
-            } //for all input values
-
-        } //for each input command
-    } //if we have inputs
-}; //game_core.process_input
-
-
-
 
 /*
 

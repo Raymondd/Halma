@@ -31,8 +31,6 @@ var verbose = true;
 
     game_server.onMessage = function(client,message) {
 
-        console.log('onMessage');
-
         if(this.fake_latency && message.split('.')[0].substr(0,1) == 'i') {
 
                 //store all input message
@@ -51,8 +49,6 @@ var verbose = true;
     };
     
     game_server._onMessage = function(client,message) {
-
-        console.log('_onMessage');
 
             //Cut the message up into sub components
         var message_parts = message.split('.');
