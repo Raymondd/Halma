@@ -1,13 +1,13 @@
-html , body {
-	background: lightgrey; 
-	color: black;
-	font-family: Helvetica;
-	margin: 0; 
-	padding: 0;
+html, body {
+    background: lightgrey;
+    color: black;
+    font-family: Helvetica;
+    margin: 0;
+    padding: 0;
 }
 
 #viewport {
-	border:solid 1px black;
-	margin: 0 10px;
-	z-index:100;
+    border: solid 1px black;
+    margin: 0 10px;
+    z-index: 100;
 }
