@@ -66,6 +66,10 @@ game_server._onMessage = function (client, message) {
         if (other_client) {
             other_client.send(message);
         }
+    } else if (message_type == 't') {
+        if (other_client) {
+            other_client.send(message);
+        }
     } else if (message_type == 'p') {
         client.send('s.p.' + message_parts[1]);
     }
@@ -102,9 +106,8 @@ game_server.createGame = function (player) {
     player.game = thegame;
     player.hosting = true;
 
-    this.log('player ' + player.userid + ' created a game with id ' + player.game.id);
+    this.log('[HALMA] Player Created Game: PlayerId: ' + player.userid + '  GameId:' + player.game.id);
 
-    //return it
     return thegame;
 
 };
@@ -149,10 +152,10 @@ game_server.endGame = function (gameid, userid) {
         delete this.games[gameid];
         this.game_count--;
 
-        this.log('game removed. there are now ' + this.game_count + ' games');
+        this.log('[HALMA] Game Removed. There are now ' + this.game_count + ' games');
 
     } else {
-        this.log('that game was not found!');
+        this.log('[HALMA] Game Not Found.');
     }
 
 };
@@ -178,7 +181,7 @@ game_server.startGame = function (game) {
 
 game_server.findGame = function (player) {
 
-    this.log('looking for a game. We have : ' + this.game_count);
+    this.log('[HALMA] Looking for a game. Current Games: ' + this.game_count);
 
     //so there are games active,
     //lets see if one needs another player

@@ -78,9 +78,6 @@ var game_core = function (game_instance) {
         };
     }
 
-    //Start a fast paced timer for measuring time easier
-    this.create_timer();
-
     //Client specific initialisation
     if (!this.server) {
 
@@ -321,7 +318,7 @@ game_core.prototype.getCursorPosition = function (e) {
 };
 
 /////////////////////////////////////////////////////
-// CLICK HANLER
+// CLICK HANDLER
 // SEND MESSAGES BETWEEN CLIENTS HERE
 /////////////////////////////////////////////////////
 game_core.prototype.onClick = function (e) {
@@ -329,11 +326,11 @@ game_core.prototype.onClick = function (e) {
 
     var cell = this.getCursorPosition(e);
 
-    console.log(cell);
-    console.log(this.isCurrentPlayersTurn());
+    //console.log(cell);
+    //console.log(this.isCurrentPlayersTurn());
 
 
-    if (this.isCurrentPlayersTurn() || true) {
+    if (this.isCurrentPlayersTurn()) {
 
         var matchingCell = _.find(this.players.self.pieces, function (p) {
             return p.x == cell.x && p.y == cell.y;
@@ -381,6 +378,10 @@ game_core.prototype.clickOnEmpty = function (cell) {
             if(this.isValidMove(this.players.self.pieces.selectedPiece, cell)) {
                 this.players.self.pieces.selectedPiece.x = cell.x;
                 this.players.self.pieces.selectedPiece.y = cell.y;
+
+                // Switch turns
+                this.resetSelected();
+                this.isHostsTurn = !this.isHostsTurn;
             }
         }
     }
@@ -483,74 +484,21 @@ game_core.prototype.handle_server_input = function (client, input, input_time, i
 game_core.prototype.client_handle_input = function () {
 
 
-    console.log('client handle input');
-
     var message = 'z.' + JSON.stringify(this.players.self.pieces);
-
-    console.log(message);
     this.socket.send(message);
 
+    var message2 = 't.' + this.isHostsTurn;
+    this.socket.send(message2);
 
 }; //game_core.client_handle_input
 
 game_core.prototype.client_onserverupdate_recieved = function (data) {
-
-    //Lets clarify the information we have locally. One of the players is 'hosting' and
-    //the other is a joined in client, so we name these host and client for making sure
-    //the positions we get from the server are mapped onto the correct local sprites
-    var player_host = this.players.self.host ? this.players.self : this.players.other;
-    var player_client = this.players.self.host ? this.players.other : this.players.self;
-    var this_player = this.players.self;
-
-    //Store the server time (this is offset by the latency in the network, by the time we get it)
-    this.server_time = data.t;
-    //Update our local offset time from the last server update
-    this.client_time = this.server_time - (this.net_offset / 1000);
-
-    //One approach is to set the position directly as the server tells you.
-    //This is a common mistake and causes somewhat playable results on a local LAN, for example,
-    //but causes terrible lag when any ping/latency is introduced. The player can not deduce any
-    //information to interpolate with so it misses positions, and packet loss destroys this approach
-    //even more so. See 'the bouncing ball problem' on Wikipedia.
-
-    if (this.naive_approach) {
-
-        if (data.hp) {
-            player_host.pos = this.pos(data.hp);
-        }
-
-        if (data.cp) {
-            player_client.pos = this.pos(data.cp);
-        }
-
-    } else {
-
-        //Cache the data from the server,
-        //and then play the timeline
-        //back to the player with a small delay (net_offset), allowing
-        //interpolation between the points.
-        this.server_updates.push(data);
-
-        //we limit the buffer in seconds worth of updates
-        //60fps*buffer seconds = number of samples
-        if (this.server_updates.length >= ( 60 * this.buffer_size )) {
-            this.server_updates.splice(0, 1);
-        }
-
-        //We can see when the last tick we know of happened.
-        //If client_time gets behind this due to latency, a snap occurs
-        //to the last tick. Unavoidable, and a reallly bad connection here.
-        //If that happens it might be best to drop the game after a period of time.
-        this.oldest_tick = this.server_updates[0].t;
-
-    } //non naive
-
 }; //game_core.client_onserverupdate_recieved
 
 game_core.prototype.drawTurnMessage = function () {
 
     this.ctx.fillStyle = 'Black';
-    var text = this.players.self.host ? 'Your turn' : "Opponent's turn";
+    var text = this.isCurrentPlayersTurn() ? 'Your turn' : "Opponent's turn";
     this.ctx.fillText(text, 16, 400);
 };
 
@@ -565,22 +513,10 @@ game_core.prototype.client_update = function () {
 
     this.drawBoard();
 
-    //Now they should have updated, we can draw the entity
     this.players.other.draw();
-
-    //And then we finally draw
     this.players.self.draw();
 
 }; //game_core.update_client
-
-game_core.prototype.create_timer = function () {
-    setInterval(function () {
-        this._dt = new Date().getTime() - this._dte;
-        this._dte = new Date().getTime();
-        this.local_time += this._dt / 1000.0;
-    }.bind(this), 1000);
-}
-
 
 game_core.prototype.client_create_ping_timer = function () {
 
@@ -588,7 +524,6 @@ game_core.prototype.client_create_ping_timer = function () {
     //client and server and calculated roughly how our connection is doing
 
     setInterval(function () {
-
         this.last_ping_time = new Date().getTime() - this.fake_lag;
         this.socket.send('p.' + (this.last_ping_time));
 
@@ -603,9 +538,6 @@ game_core.prototype.client_create_configuration = function () {
     this.net_latency = 0.001;           //the latency between the client and the server (ping/2)
     this.net_ping = 0.001;              //The round trip time from here to the server,and back
     this.last_ping_time = 0.001;        //The time we last sent a ping
-    this.net_offset = 100;              //100 ms latency between server and client interpolation for other clients
-    this.buffer_size = 2;               //The size of the server history to keep for rewinding/interpolating.
-    this.client_time = 0.01;            //Our local 'clock' based on server time - client interpolation(net_offset).
     this.server_time = 0.01;            //The time the server reported it was at, last we heard from it
     this.dt = 0.016;                    //The time that the last frame took to run
 
@@ -630,10 +562,6 @@ game_core.prototype.client_onreadygame = function (data) {
 
     var player_host = this.players.self.host ? this.players.self : this.players.other;
     var player_client = this.players.self.host ? this.players.other : this.players.self;
-
-    this.local_time = server_time + this.net_latency;
-
-    //console.log('server time is about ' + this.local_time);
 
     //Store their info colors for clarity. server is always blue
     player_host.color = 'red';
@@ -700,9 +628,6 @@ game_core.prototype.client_onhostgame = function (data) {
     //so the value will be really small anyway (15 or 16ms)
     var server_time = parseFloat(data.replace('-', '.'));
 
-    //Get an estimate of the current time on the server
-    this.local_time = server_time + this.net_latency;
-
     //Set the flag that we are hosting, this helps us position respawns correctly
     this.players.self.host = true;
 
@@ -728,10 +653,6 @@ game_core.prototype.client_onconnected = function (data) {
 }; //client_onconnected
 
 game_core.prototype.client_onping = function (data) {
-
-    this.net_ping = new Date().getTime() - parseFloat(data);
-    this.net_latency = this.net_ping / 2;
-
 }; //client_onping
 
 game_core.prototype.client_onnetmessage = function (data) {
@@ -748,6 +669,11 @@ game_core.prototype.client_onnetmessage = function (data) {
             console.log(newPositions);
             this.players.other.pieces = newPositions;
             break;
+
+        case 't' : // Turn is updated
+            this.isHostsTurn = JSON.parse(subcommand);
+            break;
+
 
         case 's': //server message
 
@@ -771,10 +697,6 @@ game_core.prototype.client_onnetmessage = function (data) {
 
                 case 'p' : //server ping
                     this.client_onping(commanddata);
-                    break;
-
-                case 'z' : // Make a move
-                    console.log('received Z');
                     break;
             } //subcommand
 

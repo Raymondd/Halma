@@ -17,11 +17,10 @@ var server = http.createServer(app);
 server.listen(gameport)
 
 //Log something so we know that it succeeded.
-console.log('\t :: Halma Server :: Listening on port ' + gameport);
+console.log('[HALMA] Listening On Port: ' + gameport);
 
 // Make the default page index.html
 app.get('/', function (req, res) {
-    console.log('trying to load %s', __dirname + '/index.html');
     res.sendfile('/index.html', {root: __dirname});
 });
 
@@ -33,7 +32,7 @@ app.get('/*', function (req, res, next) {
     var file = req.params[0];
 
     // For debugging
-    if (verbose) console.log('\t :: Halma Server :: file requested : ' + file);
+    if (verbose) console.log('[HALMA] File Requested: ' + file);
 
     //Send the requested file
     res.sendfile(__dirname + '/' + file);
@@ -64,7 +63,7 @@ sio.sockets.on('connection', function (client) {
     game_server.findGame(client);
 
     // For debugging
-    console.log('\t socket.io:: player ' + client.userid + ' connected');
+    console.log('[HALMA] Player Connected: ' + client.userid);
 
     // Handle user messages and pass it to the game server
     client.on('message', function (m) {
@@ -76,7 +75,7 @@ sio.sockets.on('connection', function (client) {
     client.on('disconnect', function () {
 
         // For debugging
-        console.log('\t socket.io:: client disconnected ' + client.userid + ' ' + client.game_id);
+        console.log('[HALMA] Client Disconnected: ' + client.userid + ' ' + client.game_id);
 
         //If the client was in a game, set by game_server.findGame,
         //we can tell the game server to update that game state.
