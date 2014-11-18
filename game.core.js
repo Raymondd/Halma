@@ -82,25 +82,13 @@ var game_core = function (game_instance) {
     if (!this.server) {
 
 
-        //Create the default configuration settings
-        this.client_create_configuration();
-
-        //A list of recent server updates we interpolate across
-        //This is the buffer that is the driving factor for our networking
-        this.server_updates = [];
-
         //Connect to the socket.io server!
         this.client_connect_to_server();
-
-        //We start pinging the server to determine latency
-        this.client_create_ping_timer();
-
 
         //Set their colors locally
         this.color = '#cc8822';
         this.players.self.color = this.color;
         this.isHostsTurn = true;
-
 
     } else { //if !server
 
@@ -222,20 +210,22 @@ game_core.prototype.drawBoard = function () {
     // draw all pieces
     if (this.players.self.pieces) {
         for (var i = 0; i < this.players.self.pieces.length; i++) {
-            this.drawPiece(this.players.self.pieces[i], this.players.self.color);
+            this.drawPiece(this.players.self.pieces[i], this.players.self.destinations, this.players.self.color);
         }
     }
 
     if (this.players.other.pieces) {
         for (var i = 0; i < this.players.other.pieces.length; i++) {
-            this.drawPiece(this.players.other.pieces[i], this.players.other.color);
+            this.drawPiece(this.players.other.pieces[i], this.players.other.destinations, this.players.other.color);
         }
     }
 
 };
 
-game_core.prototype.drawPiece = function (piece, color) {
+game_core.prototype.drawPiece = function (piece, destinations, color) {
 
+
+    var isInDest = _.any(destinations, function(cell) { return cell.x == piece.x && cell.y == piece.y});
 
     var x = piece.x;
     var y = piece.y;
@@ -246,12 +236,13 @@ game_core.prototype.drawPiece = function (piece, color) {
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2, false);
     this.ctx.closePath();
-    this.ctx.strokeStyle = piece.selected ? 'black' : color;
+    this.ctx.strokeStyle = piece.selected ? 'black' : (isInDest ? 'Green' : color);
     this.ctx.lineWidth = 4;
     this.ctx.stroke();
     this.ctx.lineWidth = 1;
 
-    this.ctx.fillStyle = color;
+
+    this.ctx.fillStyle = isInDest ? 'Green' : color;
     this.ctx.fill();
 }
 
@@ -427,24 +418,10 @@ game_core.prototype.isCurrentPlayersTurn = function () {
  and usually start with server_* to make things clearer.
 
  */
-
-
-
 //Makes sure things run smoothly and notifies clients of changes
 //on the server side
 game_core.prototype.server_update = function () {
 
-    //Update the state of our local clock to match the timer
-    this.server_time = this.local_time;
-
-    //Make a snapshot of the current state, for updating the clients
-    this.laststate = {
-        hp: this.players.self.pos,                //'host position', the game creators position
-        cp: this.players.other.pos,               //'client position', the person that joined, their position
-        his: this.players.self.last_input_seq,     //'host input sequence', the last input we processed for the host
-        cis: this.players.other.last_input_seq,    //'client input sequence', the last input we processed for the client
-        t: this.server_time                      // our current local time on the server
-    };
 
     //Send the snapshot to the 'host' player
     if (this.players.self.instance) {
@@ -471,15 +448,6 @@ game_core.prototype.handle_server_input = function (client, input, input_time, i
 
 }; //game_core.handle_server_input
 
-
-/*
-
- Client side functions
-
- These functions below are specific to the client side only,
- and usually start with client_* to make things clearer.
-
- */
 
 game_core.prototype.client_handle_input = function () {
 
@@ -517,31 +485,6 @@ game_core.prototype.client_update = function () {
     this.players.self.draw();
 
 }; //game_core.update_client
-
-game_core.prototype.client_create_ping_timer = function () {
-
-    //Set a ping timer to 1 second, to maintain the ping/latency between
-    //client and server and calculated roughly how our connection is doing
-
-    setInterval(function () {
-        this.last_ping_time = new Date().getTime() - this.fake_lag;
-        this.socket.send('p.' + (this.last_ping_time));
-
-    }.bind(this), 1000);
-
-}; //game_core.client_create_ping_timer
-
-
-game_core.prototype.client_create_configuration = function () {
-
-
-    this.net_latency = 0.001;           //the latency between the client and the server (ping/2)
-    this.net_ping = 0.001;              //The round trip time from here to the server,and back
-    this.last_ping_time = 0.001;        //The time we last sent a ping
-    this.server_time = 0.01;            //The time the server reported it was at, last we heard from it
-    this.dt = 0.016;                    //The time that the last frame took to run
-
-};//game_core.client_create_configuration
 
 
 game_core.prototype.client_reset_positions = function () {
@@ -599,6 +542,34 @@ game_core.prototype.client_onreadygame = function (data) {
         {x: this.kBoardWidth - 3, y: this.kBoardHeight - 2},
         {x: this.kBoardWidth - 3, y: this.kBoardHeight - 3},
         //{x: this.kBoardWidth - 3, y: this.kBoardHeight - 4},
+    ];
+
+    player_host.destinations = [
+        {x: this.kBoardWidth - 1, y: 0},
+        {x: this.kBoardWidth - 1, y: 1},
+        {x: this.kBoardWidth - 1, y: 2},
+
+        {x: this.kBoardWidth - 2, y: 0},
+        {x: this.kBoardWidth - 2, y: 1},
+        {x: this.kBoardWidth - 2, y: 2},
+
+        {x: this.kBoardWidth - 3, y: 0},
+        {x: this.kBoardWidth - 3, y: 1},
+        {x: this.kBoardWidth - 3, y: 2}
+    ];
+
+    player_client.destinations = [
+        {x: 0, y: 0},
+        {x: 0, y: 1},
+        {x: 0, y: 2},
+
+        {x: 1, y: 0},
+        {x: 1, y: 1},
+        {x: 1, y: 2},
+
+        {x: 2, y: 0},
+        {x: 2, y: 1},
+        {x: 2, y: 2}
     ];
 
     //Update their information
